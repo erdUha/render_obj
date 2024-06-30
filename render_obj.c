@@ -19,6 +19,7 @@ int main ()
 	}
 	char line[64];
 	unsigned long verticiesCount = 0;
+	unsigned long normalsCount = 0;
 	unsigned long trianglesCount = 0;
 	while (fgets(line, 64, objFile) != NULL)
 	{
@@ -27,6 +28,8 @@ int main ()
 			code[i] = line[i];
 		if (strcmp(code, "v") == 0)
 			verticiesCount++;
+		if (strcmp(code, "vn") == 0)
+			normalsCount++;
 		if (strcmp(code, "f") == 0)
 		{
 			u_char verticiesPerFace = 1;
@@ -43,31 +46,47 @@ int main ()
 	}
 	fseek(objFile, 0, 0);
 	struct Point *Verticies = (struct Point*)calloc(verticiesCount, sizeof(struct Point));
+	struct Normal *Normals = (struct Normal*)calloc(normalsCount, sizeof(struct Normal));
 	struct Triangle3 *Triangles = (struct Triangle3*)calloc(trianglesCount, sizeof(struct Triangle3));
 	ulong v = 0;
+	ulong n = 0;
 	ulong f = 0;
 	while (fgets(line, 64, objFile) != NULL)
 	{
-		//char code[3] = "  \0";
 		char code[3] = {'\0'};
 		for (int i = 0; line[i] != ' ' && i < 2; i++)
 			code[i] = line[i];
 		if (strcmp(code, "v") == 0)
 		{
-			char c[32] = {'\0'};
+			char c[10] = {'\0'};
 			u_char i = 2, i2 = 0;
 			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
 			Verticies[v].x = -atof(c);
-			i++;
-			i2 = 0;
+			i++; i2 = 0; memset(&c, 0, 10);
 			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
 			Verticies[v].y = atof(c);
-			i++;
-			i2 = 0;
+			i++; i2 = 0;  memset(&c, 0, 10);
 			while (line[i] != '\n') { c[i2] = line[i]; i++; i2++; }
 			Verticies[v].z = atof(c);
+			memset(&c, 0, 10);
 
 			v++;
+		}
+		if (strcmp(code, "vn") == 0)
+		{
+			u_char i = 3, i2 = 0;
+			char c[8] = {'\0'};
+			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
+			Normals[n].x = atof(c);
+			i++; i2 = 0; memset(&c, 0, 8);
+			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
+			Normals[n].y = atof(c);
+			i++; i2 = 0; memset(&c, 0, 8);
+			while (line[i] != '\n') { c[i2] = line[i]; i++; i2++; }
+			Normals[n].z = atof(c);
+			memset(&c, 0, 8);
+
+			n++;
 		}
 		if (strcmp(code, "f") == 0)
 		{
@@ -77,14 +96,15 @@ int main ()
 				if (line[i] == ' ')
 					verticiesPerFace++;
 			}
-			char c[30] = {'\0'};
-			u_char i = 2, i2 = 0;
+			char c[32] = {'\0'};
+			u_char i = 2;
 			for (u_char g = 0; g < verticiesPerFace; g++)
 			{
-				while (line[i] != '/') { c[i2] = line[i]; i++; i2++; }
-				// For Verticies
+				u_char i2 = 0;
 				if (verticiesPerFace == 3)
 				{
+					while (line[i] != '/') { c[i2] = line[i]; i++; i2++; }
+					// For Verticies
 					switch (g)
 					{
 						case 0:
@@ -104,27 +124,47 @@ int main ()
 							break;
 					}
 					Triangles[f].s1 = 1.0; Triangles[f].s2 = 1.0; Triangles[f].s3 = 1.0;
+					i++; i2 = 0;  memset(&c, 0, 32);
+					while (line[i] != '/') { c[i2] = line[i]; i++; i2++; }
+					// For UV
+					i++; i2 = 0; memset(&c, 0, 32);
+					while (line[i] != ' ' && line[i] != '\n') { c[i2] = line[i]; i++; i2++; }
+					// For Normals
+					switch (g)
+					{
+						case 0:
+							Triangles[f].n1.x = Normals[atoi(c)-1].x;
+							Triangles[f].n1.y = Normals[atoi(c)-1].y;
+							Triangles[f].n1.z = Normals[atoi(c)-1].z;
+							break;
+						case 1:
+							Triangles[f].n2.x = Normals[atoi(c)-1].x;
+							Triangles[f].n2.y = Normals[atoi(c)-1].y;
+							Triangles[f].n2.z = Normals[atoi(c)-1].z;
+							break;
+						case 2:
+							Triangles[f].n3.x = Normals[atoi(c)-1].x;
+							Triangles[f].n3.y = Normals[atoi(c)-1].y;
+							Triangles[f].n3.z = Normals[atoi(c)-1].z;
+							break;
+					}
+					memset(&c, 0, 32);
 				}
-				i++; i2 = 0; 
-				while (line[i] != '/') { c[i2] = line[i]; i++; i2++; }
-				// For UV
-				i++; i2 = 0; memset(&c, 0, 10);
-				while (line[i] != ' ' && line[i] != '\n') { c[i2] = line[i]; i++; i2++; }
-				// For Normals
-				i++; i2 = 0; memset(&c, 0, 10);
 			}
 			f++;
 		}
 	}
 	fclose(objFile);
+	free(Verticies);
+	free(Normals);
 
-	u_char **coord = (u_char**)calloc(HEIGHT, sizeof(u_char*));
+	u_char *coord[HEIGHT];
 	for (int i = 0; i < HEIGHT; i++)
 	{
 		coord[i] = (u_char*)calloc(WIDTH, sizeof(u_char));
 	}
 
-	float **zbuffer = (float**)calloc(HEIGHT, sizeof(float*));
+	float *zbuffer[HEIGHT];
 	for (int i = 0; i < HEIGHT; i++)
 	{
 		zbuffer[i] = (float*)calloc(WIDTH, sizeof(float));

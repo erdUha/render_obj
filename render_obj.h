@@ -291,9 +291,9 @@ struct Vec3 VecMinusPoint (struct Vec3 vec, struct Point point)
 struct Triangle2 Rasterize (ushort w, ushort h, ushort s, float ar, ushort fov, struct Triangle3 tr)
 {
 	struct Triangle2 ans = {
-		RoundF((tr.x1 / tr.z1) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)), (int)(-(tr.y1 / tr.z1) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
-		RoundF((tr.x2 / tr.z2) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)), (int)(-(tr.y2 / tr.z2) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
-		RoundF((tr.x3 / tr.z3) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)), (int)(-(tr.y3 / tr.z3) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
+		RoundF((tr.x1 / tr.z1) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)), RoundF(-(tr.y1 / tr.z1) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
+		RoundF((tr.x2 / tr.z2) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)), RoundF(-(tr.y2 / tr.z2) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
+		RoundF((tr.x3 / tr.z3) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)), RoundF(-(tr.y3 / tr.z3) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
 		tr.s1, tr.s2, tr.s3
 	};
 	return ans;
