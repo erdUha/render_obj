@@ -10,7 +10,7 @@ int main ()
 	int HEIGHT = w.ws_row;
 	int SMALLEST = ((float)WIDTH / ASPECT_RATIO < HEIGHT) ? RoundF((float)WIDTH / ASPECT_RATIO) : HEIGHT;
 
-	char filename[] = "donut.obj";
+	char filename[] = OBJ_FILE;
 	FILE *objFile = fopen(filename, "rt");
 	if (objFile == NULL)
 	{
