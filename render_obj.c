@@ -124,6 +124,16 @@ int main ()
 		coord[i] = (u_char*)calloc(WIDTH, sizeof(u_char));
 	}
 
+	float **zbuffer = (float**)calloc(HEIGHT, sizeof(float*));
+	for (int i = 0; i < HEIGHT; i++)
+	{
+		zbuffer[i] = (float*)calloc(WIDTH, sizeof(float));
+		for (int i2 = 0; i2 < WIDTH; i2++)
+		{
+			zbuffer[i][i2] = MAX_DISTANCE;
+		}
+	}
+
 	for (uint i = 0; i < 1; i++)
 	{
 		if (!DEBUG)
@@ -131,7 +141,7 @@ int main ()
 			for (ulong g = 0; g < trianglesCount; g++)
 			{
 				struct Triangle2 tr = Rasterize(WIDTH, HEIGHT, SMALLEST, ASPECT_RATIO, FOV, Triangles[g]);
-				DrawTriangle2(WIDTH, HEIGHT, coord, &tr);
+				DrawTriangle2(WIDTH, HEIGHT, coord, zbuffer, &tr);
 			}
 			for (int y = 0; y < HEIGHT; y++)
 			{
@@ -142,7 +152,7 @@ int main ()
 				putchar('\n');
 			}
 			//usleep(16667);
-			Clear(WIDTH, HEIGHT, coord);
+			Clear(WIDTH, HEIGHT, coord, zbuffer);
 		}
 	}
 	return 0;

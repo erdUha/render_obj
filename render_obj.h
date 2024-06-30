@@ -122,7 +122,7 @@ void DrawLine (ushort WIDTH, ushort HEIGHT, u_char** coord, ushort x0, ushort y0
 	}
 }
 
-void DrawHorizontalGradient (ushort WIDTH, ushort HEIGHT, u_char** coord, int x0, int x1, int y, float s0, float s1) {
+void DrawHorizontalGradient (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer, int x0, int x1, int y, float s0, float s1, float z1, float z2) {
 	if (x1 - x0 == 0)
 	{
 		return;
@@ -139,8 +139,10 @@ void DrawHorizontalGradient (ushort WIDTH, ushort HEIGHT, u_char** coord, int x0
 	{
 		float xf = (float)x, x0f = (float)x0, x1f = (float)x1;
 		float k = (xf - x0f) / (x1f - x0f);
-		if (x >= 0 && x < WIDTH)
+		float tmp_z = z1 * (1.0 - k) + z2 * k;
+		if (x >= 0 && x < WIDTH && tmp_z >= 0 && tmp_z < zbuffer[y][x])
 		{
+			zbuffer[y][x] = tmp_z;
 			coord[y][x] = RoundF((float)GRADIENT_SIZE + (255.0 - (float)GRADIENT_SIZE) * (s0 * (1.0 - k) + s1 * k));
 		}
 	}
@@ -168,7 +170,7 @@ void SortTriangle2 (struct Triangle2* tr)
 	}
 }
 
-void DrawTriangle2 (ushort WIDTH, ushort HEIGHT, u_char** coord, struct Triangle2* tr)
+void DrawTriangle2 (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer, struct Triangle2* tr)
 {
 	SortTriangle2(tr);
 	int dx12 = tr->x2 - tr->x1;
@@ -215,22 +217,23 @@ void DrawTriangle2 (ushort WIDTH, ushort HEIGHT, u_char** coord, struct Triangle
 		}
 		if (dx12 >= 0 && dx23 <= 0 && dy23 != 0)
 		{
-			DrawHorizontalGradient(WIDTH, HEIGHT, coord, x12, x13, i, s13, s12);
+			DrawHorizontalGradient(WIDTH, HEIGHT, coord, zbuffer, x12, x13, i, s13, s12, 1.0, 1.0);
 		}
 		else
 		{
-			DrawHorizontalGradient(WIDTH, HEIGHT, coord, x12, x13, i, s12, s13);
+			DrawHorizontalGradient(WIDTH, HEIGHT, coord, zbuffer, x12, x13, i, s12, s13, 1.0, 1.0);
 		}
 	}
 }
 
-void Clear (ushort width, ushort height, u_char** coord)
+void Clear (ushort width, ushort height, u_char** coord, float** zbuffer)
 {
 	for (ushort y = 0; y < height; y++)
 	{
 		for (ushort x = 0; x < width; x++)
 		{
 			coord[y][x] = 0;
+			zbuffer[y][x] = MAX_DISTANCE;
 		}
 	}
 }
