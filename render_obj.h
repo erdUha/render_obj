@@ -48,6 +48,11 @@ struct Point
 	float x, y, z;
 };
 
+struct Normal
+{
+	float x, y, z;
+};
+
 struct Triangle2
 {
 	short x1, y1, x2, y2, x3, y3;
@@ -57,16 +62,12 @@ struct Triangle2
 struct Triangle3
 {
 	float x1, y1, z1, x2, y2, z2, x3, y3, z3, s1, s2, s3;
+	struct Normal n1, n2, n3;
 };
 
 struct Vec3
 {
 	float x, y, z, Ox, Oy, Oz;
-};
-
-struct Normal
-{
-	float x, y, z;
 };
 
 void DrawLine (ushort WIDTH, ushort HEIGHT, u_char** coord, ushort x0, ushort y0, ushort x1, ushort y1) {

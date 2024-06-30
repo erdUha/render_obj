@@ -10,17 +10,17 @@ int main ()
 	int HEIGHT = w.ws_row;
 	int SMALLEST = ((float)WIDTH / ASPECT_RATIO < HEIGHT) ? RoundF((float)WIDTH / ASPECT_RATIO) : HEIGHT;
 
-	char filename[] = "cube.obj";
+	char filename[] = "donut.obj";
 	FILE *objFile = fopen(filename, "rt");
 	if (objFile == NULL)
 	{
 		printf("\033[31mERR:\033[0m Failed to open file \"%s\"\n", filename);
 		return -1;
 	}
-	char line[32];
-	int verticiesCount = 0;
-	int trianglesCount = 0;
-	while (fgets(line, 32, objFile) != NULL)
+	char line[64];
+	unsigned long verticiesCount = 0;
+	unsigned long trianglesCount = 0;
+	while (fgets(line, 64, objFile) != NULL)
 	{
 		char code[3] = {'\0'};
 		for (int i = 0; line[i] != ' ' && i < 2; i++)
@@ -44,9 +44,9 @@ int main ()
 	fseek(objFile, 0, 0);
 	struct Point *Verticies = (struct Point*)calloc(verticiesCount, sizeof(struct Point));
 	struct Triangle3 *Triangles = (struct Triangle3*)calloc(trianglesCount, sizeof(struct Triangle3));
-	int v = 0;
-	int f = 0;
-	while (fgets(line, 32, objFile) != NULL)
+	ulong v = 0;
+	ulong f = 0;
+	while (fgets(line, 64, objFile) != NULL)
 	{
 		//char code[3] = "  \0";
 		char code[3] = {'\0'};
@@ -54,7 +54,7 @@ int main ()
 			code[i] = line[i];
 		if (strcmp(code, "v") == 0)
 		{
-			char c[10] = {'\0'};
+			char c[32] = {'\0'};
 			u_char i = 2, i2 = 0;
 			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
 			Verticies[v].x = -atof(c);
@@ -77,7 +77,7 @@ int main ()
 				if (line[i] == ' ')
 					verticiesPerFace++;
 			}
-			char c[10] = {'\0'};
+			char c[30] = {'\0'};
 			u_char i = 2, i2 = 0;
 			for (u_char g = 0; g < verticiesPerFace; g++)
 			{
@@ -124,11 +124,11 @@ int main ()
 		coord[i] = (u_char*)calloc(WIDTH, sizeof(u_char));
 	}
 
-	for (int i = 0; i < 1; i++)
+	for (uint i = 0; i < 1; i++)
 	{
 		if (!DEBUG)
 		{
-			for (int g = 0; g < trianglesCount; g++)
+			for (ulong g = 0; g < trianglesCount; g++)
 			{
 				struct Triangle2 tr = Rasterize(WIDTH, HEIGHT, SMALLEST, ASPECT_RATIO, FOV, Triangles[g]);
 				DrawTriangle2(WIDTH, HEIGHT, coord, &tr);
@@ -145,36 +145,5 @@ int main ()
 			Clear(WIDTH, HEIGHT, coord);
 		}
 	}
-	/*
-
-	struct Point Light = {2.0, 2.0, 3.0};
-	struct Triangle tr1 = {
-		0.0, 2.0, 3.0, 
-		2.0, -2.0, 3.0,
-		-2.0, -2.0, 3.0
-	};
-	
-	for (int i = 0; i < pow(2, (sizeof(int) * 8)); i++)
-	{
-		for (int y = HEIGHT; y >= 0; y--)
-		{
-			for(int x = 0; x <= WIDTH; x++)
-			{
-				struct Vec3 ray = {
-					((float)(x) - ((float)(WIDTH) / 2.0)) / (float)(SMALLEST) / ratioX * tan((float)FOV * M_PI / 360.0) * 2.0,
-					((float)(y) - ((float)(HEIGHT) / 2.0)) / (float)(SMALLEST) / ratioY * tan((float)FOV * M_PI / 360.0) * 2.0,
-					1.0,
-					0.0,
-					0.0,
-					0.0
-				};
-			}
-			putchar('\n');
-		}
-		usleep(41600);
-		Light.x = cos((float)(i) / 10) * 2.0;
-		Light.z = 3.0 + sin((float)(i) / 10) * 2.0;
-	}
-	*/
 	return 0;
 }
