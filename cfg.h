@@ -1,4 +1,4 @@
-#define OBJ_FILE "obj/donut.obj"
+#define OBJ_FILE "obj/monkey.obj"
 #define ASCII_GRADIENT " .,:;xXS\%&@$#"
 #define GRADIENT_SIZE 13
 #define ASPECT_RATIO 2.9f
