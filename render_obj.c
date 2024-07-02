@@ -6,19 +6,19 @@ int main ()
 {
 	struct winsize w;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-	int WIDTH = w.ws_col;
-	int HEIGHT = w.ws_row;
-	int SMALLEST = ((float)WIDTH / ASPECT_RATIO < HEIGHT) ? RoundF((float)WIDTH / ASPECT_RATIO) : HEIGHT;
+	ushort WIDTH = w.ws_col;
+	ushort HEIGHT = w.ws_row;
+	ushort SHORTEST = ((float)WIDTH / ASPECT_RATIO < HEIGHT) ? RoundF((float)WIDTH / ASPECT_RATIO) : HEIGHT;
 
 	struct Triangle3 *Triangles;
 
 	ulong trianglesCount;
 
-	Fetch(OBJ_FILE, &Triangles, &trianglesCount);
+	struct Point offset = { OBJ_X, OBJ_Y, OBJ_Z };
 
-	struct Sun sun = {-0.5, -1.0, -0.3, 1.0};
+	Fetch(OBJ_FILE, &Triangles, &trianglesCount, 1.0, offset);
 
-	ComputeLight(Triangles, trianglesCount, sun);
+	struct Sun sun = {SUN_X, SUN_Y, SUN_Z, 1.0};
 
 	u_char *coord[HEIGHT];
 	for (int i = 0; i < HEIGHT; i++)
@@ -36,21 +36,28 @@ int main ()
 		}
 	}
 
+	struct Normal *normalbuffer[HEIGHT];
+	for (int i = 0; i < HEIGHT; i++)
+	{
+		normalbuffer[i] = (struct Normal*)calloc(WIDTH, sizeof(struct Normal));
+	}
+
 	for (uint i = 0; i < 1; i++)
 	{
 		if (!DEBUG)
 		{
 			for (ulong g = 0; g < trianglesCount; g++)
 			{
-				struct Triangle2 tr = Rasterize(WIDTH, HEIGHT, SMALLEST, ASPECT_RATIO, FOV, Triangles[g]);
-				DrawTriangle2(WIDTH, HEIGHT, coord, zbuffer, &tr);
+				struct Triangle2 tr = Rasterize(WIDTH, HEIGHT, SHORTEST, ASPECT_RATIO, Triangles[g]);
+
+				DrawTriangle2(WIDTH, HEIGHT, coord, zbuffer, normalbuffer, &tr);
 			}
+			ComputeLight(WIDTH, HEIGHT, SHORTEST, coord, zbuffer, normalbuffer, sun);
 			for (int y = 0; y < HEIGHT; y++)
 			{
 				for (int x = 0; x < WIDTH; x++)
 				{
 					putchar(ASCII_GRADIENT[(int)((float)coord[y][x] * ((float)GRADIENT_SIZE / 256.0))]);
-					//printf("%f\n", zbuffer[y][x]);
 				}
 				putchar('\n');
 			}

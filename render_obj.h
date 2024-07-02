@@ -56,13 +56,15 @@ struct Normal
 struct Triangle2
 {
 	short x1, y1, x2, y2, x3, y3;
-	float s1, s2, s3;
+	struct Normal n1, n2, n3;
+	float c1, c2, c3;
 	float z1, z2, z3; 
 };
 
 struct Triangle3
 {
-	float x1, y1, z1, x2, y2, z2, x3, y3, z3, s1, s2, s3;
+	float x1, y1, z1, x2, y2, z2, x3, y3, z3;
+	float c1, c2, c3;
 	struct Normal n1, n2, n3;
 };
 
@@ -128,7 +130,7 @@ void DrawLine (ushort WIDTH, ushort HEIGHT, u_char** coord, ushort x0, ushort y0
 	}
 }
 
-void DrawHorizontalGradient (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer, int x0, int x1, int y, float s0, float s1, float z1, float z2) {
+void DrawHorizontalGradient (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer, struct Normal** normalbuffer, int x0, int x1, int y, struct Normal n0, struct Normal n1, float z0, float z1, float c0, float c1) {
 	if (x1 - x0 == 0)
 	{
 		return;
@@ -145,11 +147,18 @@ void DrawHorizontalGradient (ushort WIDTH, ushort HEIGHT, u_char** coord, float*
 	{
 		float xf = (float)x, x0f = (float)x0, x1f = (float)x1;
 		float k = (xf - x0f) / (x1f - x0f);
-		float tmp_z = z1 * (1.0 - k) + z2 * k;
+		float tmp_z = z0 * (1.0 - k) + z1 * k;
+		struct Normal tmp_n = {
+			n0.x * (1.0 - k) + n1.x * k,
+			n0.y * (1.0 - k) + n1.y * k,
+			n0.z * (1.0 - k) + n1.z * k,
+		};
+
 		if (x >= 0 && x < WIDTH && tmp_z >= 0 && tmp_z < zbuffer[y][x])
 		{
+			normalbuffer[y][x] = tmp_n;
 			zbuffer[y][x] = tmp_z;
-			coord[y][x] = RoundF((float)GRADIENT_SIZE + (255.0 - (float)GRADIENT_SIZE) * (s0 * (1.0 - k) + s1 * k));
+			coord[y][x] = RoundF((float)GRADIENT_SIZE + (255.0 - (float)GRADIENT_SIZE) * (c0 * (1.0 - k) + c1 * k));
 		}
 	}
 }
@@ -160,26 +169,26 @@ void SortTriangle2 (struct Triangle2* tr)
 	{
 		swap(&tr->x1, &tr->x2, sizeof(tr->x1));
 		swap(&tr->y1, &tr->y2, sizeof(tr->y1));
-		swap(&tr->s1, &tr->s2, sizeof(tr->s1));
+		swap(&tr->n1, &tr->n2, sizeof(tr->n1));
 		swap(&tr->z1, &tr->z2, sizeof(tr->z1));
 	}
 	if (tr->y2 > tr->y3) 
 	{
 		swap(&tr->x2, &tr->x3, sizeof(tr->x2));
 		swap(&tr->y2, &tr->y3, sizeof(tr->y2));
-		swap(&tr->s2, &tr->s3, sizeof(tr->s2));
+		swap(&tr->n2, &tr->n3, sizeof(tr->n2));
 		swap(&tr->z2, &tr->z3, sizeof(tr->z2));
 	}
 	if (tr->y1 > tr->y2) 
 	{
 		swap(&tr->x1, &tr->x2, sizeof(tr->x1));
 		swap(&tr->y1, &tr->y2, sizeof(tr->y1));
-		swap(&tr->s1, &tr->s2, sizeof(tr->s1));
+		swap(&tr->n1, &tr->n2, sizeof(tr->n1));
 		swap(&tr->z1, &tr->z2, sizeof(tr->z1));
 	}
 }
 
-void DrawTriangle2 (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer, struct Triangle2* tr)
+void DrawTriangle2 (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer, struct Normal** normalbuffer, struct Triangle2* tr)
 {
 	SortTriangle2(tr);
 	int dx12 = tr->x2 - tr->x1;
@@ -206,36 +215,43 @@ void DrawTriangle2 (ushort WIDTH, ushort HEIGHT, u_char** coord, float** zbuffer
 		k13 = (float)(i - tr->y1) / (float)(tr->y3 - tr->y1);
 		k23 = (float)(i - tr->y2) / (float)(tr->y3 - tr->y2);
 		short x12, x13;
-		float s12, s13;
+		struct Normal n12, n13;
 		float z12, z13;
+		float c12, c13;
 		if (i < tr->y2)
 		{
 			if (!isfinite(rdx12))
 				continue;
 			x12 = RoundF(rdx12 * (float)(i - tr->y1) + tr->x1);
-			x13 = RoundF(rdx13 * (float)(i - tr->y1) + tr->x1);
-			s12 = tr->s1 * (1.0 - k12) + tr->s2 * k12;
-			s13 = tr->s1 * (1.0 - k13) + tr->s3 * k13;
+			n12.x = tr->n1.x * (1.0 - k12) + tr->n2.x * k12;
+			n12.y = tr->n1.y * (1.0 - k12) + tr->n2.y * k12;
+			n12.z = tr->n1.z * (1.0 - k12) + tr->n2.z * k12;
 			z12 = tr->z1 * (1.0 - k12) + tr->z2 * k12;
-			z13 = tr->z1 * (1.0 - k13) + tr->z3 * k13;
+			c12 = tr->c1 * (1.0 - k12) + tr->c2 * k12;
 		} else
 		{
 			if (!isfinite(rdx23))
 				continue;
 			x12 = RoundF(rdx23 * (float)(i - tr->y2) + tr->x2);
-			x13 = RoundF(rdx13 * (float)(i - tr->y1) + tr->x1);
-			s12 = tr->s2 * (1.0 - k23) + tr->s3 * k23;
-			s13 = tr->s1 * (1.0 - k13) + tr->s3 * k13;
+			n12.x = tr->n2.x * (1.0 - k23) + tr->n3.x * k23;
+			n12.y = tr->n2.y * (1.0 - k23) + tr->n3.y * k23;
+			n12.z = tr->n2.z * (1.0 - k23) + tr->n3.z * k23;
 			z12 = tr->z2 * (1.0 - k23) + tr->z3 * k23;
-			z13 = tr->z1 * (1.0 - k13) + tr->z3 * k13;
+			c12 = tr->c2 * (1.0 - k23) + tr->c3 * k23;
 		}
-		if (dx12 >= 0 && dx23 <= 0 && dy23 != 0)
+		x13 = RoundF(rdx13 * (float)(i - tr->y1) + tr->x1);
+		n13.x = tr->n1.x * (1.0 - k13) + tr->n3.x * k13;
+		n13.y = tr->n1.y * (1.0 - k13) + tr->n3.y * k13;
+		n13.z = tr->n1.z * (1.0 - k13) + tr->n3.z * k13;
+		z13 = tr->z1 * (1.0 - k13) + tr->z3 * k13;
+		c13 = tr->c1 * (1.0 - k13) + tr->c3 * k13;
+		if ((dx12 >= 0 && rdx12 > rdx13) || (dx12 < 0 && rdx12 > rdx13))
 		{
-			DrawHorizontalGradient(WIDTH, HEIGHT, coord, zbuffer, x12, x13, i, s13, s12, z13, z12);
+			DrawHorizontalGradient(WIDTH, HEIGHT, coord, zbuffer, normalbuffer, x12, x13, i, n13, n12, z13, z12, c13, c12);
 		}
 		else
 		{
-			DrawHorizontalGradient(WIDTH, HEIGHT, coord, zbuffer, x12, x13, i, s12, s13, z12, z13);
+			DrawHorizontalGradient(WIDTH, HEIGHT, coord, zbuffer, normalbuffer, x12, x13, i, n12, n13, z12, z13, c12, c13);
 		}
 	}
 }
@@ -302,19 +318,24 @@ struct Vec3 VecMinusPoint (struct Vec3 vec, struct Point point)
 	return vec;
 }
 
-struct Triangle2 Rasterize (ushort w, ushort h, ushort s, float ar, ushort fov, struct Triangle3 tr)
+struct Triangle2 Rasterize (ushort w, ushort h, ushort s, float ar, struct Triangle3 tr)
 {
+	float kx = (float)s * ASPECT_RATIO / tan((float)FOV * M_PI / 360.0);
+	float ky = (float)s / tan((float)FOV * M_PI / 360.0);
+	float hw = (float)w / 2.0;
+	float hh = (float)h / 2.0;
 	struct Triangle2 ans = {
-		RoundF((tr.x1 / tr.z1) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)),
-		RoundF(-(tr.y1 / tr.z1) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
+		RoundF((tr.x1 / tr.z1) * kx + hw),
+		RoundF(-(tr.y1 / tr.z1) * ky + hh),
 
-		RoundF((tr.x2 / tr.z2) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)),
-		RoundF(-(tr.y2 / tr.z2) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
+		RoundF((tr.x2 / tr.z2) * kx + hw),
+		RoundF(-(tr.y2 / tr.z2) * ky + hh),
 		
-		RoundF((tr.x3 / tr.z3) * (float)s * ASPECT_RATIO / tan((float)fov * M_PI / 360.0) + ((float)w/2.0)),
-		RoundF(-(tr.y3 / tr.z3) * (float)s / tan((float)fov * M_PI / 360.0) + ((float)h/2.0)),
+		RoundF((tr.x3 / tr.z3) * kx + hw),
+		RoundF(-(tr.y3 / tr.z3) * ky + hh),
 
-		tr.s1, tr.s2, tr.s3,
+		tr.n1, tr.n2, tr.n3,
+		tr.c1, tr.c2, tr.c3,
 		tr.z1, tr.z2, tr.z3
 	};
 	return ans;
@@ -351,25 +372,19 @@ float NormalLen (struct Normal normal)
 	return sqrt(pow(normal.x, 2.0) + pow(normal.y, 2.0) + pow(normal.z, 2.0));
 }
 
-struct Normal VecNormalize (struct Vec3 vec)
+void Normalize (struct Normal *normal)
 {
-	struct Normal res = {
-		vec.x - vec.Ox,
-		vec.y - vec.Oy,
-		vec.z - vec.Oz
-	};
-	float len = NormalLen(res);
+	float len = NormalLen(*normal);
 	if (len == 0.0)
 	{
-		res.x = 0.0;
-		res.y = 0.0;
-		res.z = 0.0;
-		return res;
+		(*normal).x = 0.0;
+		(*normal).y = 0.0;
+		(*normal).z = 0.0;
+		return;
 	}
-	res.x /= len;
-	res.y /= len;
-	res.z /= len;
-	return res;
+	(*normal).x /= len;
+	(*normal).y /= len;
+	(*normal).z /= len;
 }
 
 struct Normal CrossProduct (struct Vec3 vec1, struct Vec3 vec2)
@@ -386,32 +401,49 @@ struct Normal CrossProduct (struct Vec3 vec1, struct Vec3 vec2)
 	return ans;
 }
 
-void ComputeLight (struct Triangle3 *Triangles, ulong trianglesCount, struct Sun sun)
+void ComputeLight(ushort w, ushort h, ushort s, u_char** coord, float** zbuffer, struct Normal** normalbuffer, struct Sun sun)
 {
-	for (int i = 0; i < trianglesCount; i++)
+	float kx = (float)s * ASPECT_RATIO / tan((float)FOV * M_PI / 360.0);
+	float ky = (float)s / tan((float)FOV * M_PI / 360.0);
+	float hw = (float)w / 2.0;
+	float hh = (float)h / 2.0;
+	float minx = 0.0;
+	float miny = 0.0;
+	float maxx = 0.0;
+	float maxy = 0.0;
+	for (int y = 0; y < h; y++)
 	{
-		struct Vec3 VertexNormal1 = {Triangles[i].n1.x, Triangles[i].n1.y, Triangles[i].n1.z, 0.0, 0.0, 0.0};
-		struct Vec3 VertexToSun1 = {-sun.x, -sun.y, -sun.z, 0.0, 0.0, 0.0};
-		Triangles[i].s1 = fmax(0.0, cos(AngleBetweenVecs(VertexNormal1, VertexToSun1)) * 0.5 + 0.5);
-
-
-		struct Vec3 VertexNormal2 = {Triangles[i].n2.x, Triangles[i].n2.y, Triangles[i].n2.z, 0.0, 0.0, 0.0};
-		struct Vec3 VertexToSun2 = {-sun.x, -sun.y, -sun.z, 0.0, 0.0, 0.0};
-		Triangles[i].s2 = fmax(0.0, cos(AngleBetweenVecs(VertexNormal2, VertexToSun2)) * 0.5 + 0.5);
-
-		struct Vec3 VertexNormal3 = {Triangles[i].n3.x, Triangles[i].n3.y, Triangles[i].n3.z, 0.0, 0.0, 0.0};
-		struct Vec3 VertexToSun3 = {-sun.x, -sun.y, -sun.z, 0.0, 0.0, 0.0};
-		Triangles[i].s3 = fmax(0.0, cos(AngleBetweenVecs(VertexNormal3, VertexToSun3)) * 0.5 + 0.5);
+		for (int x = 0; x < w; x++)
+		{
+			if (zbuffer[y][x] != MAX_DISTANCE)
+			{
+				struct Point Intersection = {
+					((float)(x) - hw) * zbuffer[y][x] / kx,
+					((float)(y) - hh) * zbuffer[y][x] / ky,
+				};
+				struct Vec3 objNormal = {
+					normalbuffer[y][x].x, 
+					normalbuffer[y][x].y, 
+					normalbuffer[y][x].z,
+					0.0, 0.0, 0.0
+				};
+				struct Vec3 objToSun = {
+					-sun.x, -sun.y, -sun.z,
+					0.0, 0.0, 0.0
+				};
+				coord[y][x] *= fmax(0.0, cos(AngleBetweenVecs(objNormal, objToSun)));
+			}
+		}
 	}
 }
  
-void Fetch (char filename[], struct Triangle3 **Triangles, ulong *trianglesCount)
+void Fetch (char filename[], struct Triangle3 **Triangles, ulong *trianglesCount, float color, struct Point offset)
 {
 	FILE *objFile = fopen(filename, "rt");
 	if (objFile == NULL)
 	{
 		printf("\033[31mERR:\033[0m Failed to open file \"%s\"\n", filename);
-		return;
+		exit(-1);
 	}
 	char line[64];
 	ulong verticiesCount = 0;
@@ -443,6 +475,7 @@ void Fetch (char filename[], struct Triangle3 **Triangles, ulong *trianglesCount
 	fseek(objFile, 0, 0);
 	struct Point *Vertices = (struct Point*)calloc(verticiesCount, sizeof(struct Point));
 	struct Normal *Normals = (struct Normal*)calloc(normalsCount, sizeof(struct Normal));
+	struct Normal *VertexNormals = (struct Normal*)calloc(verticiesCount, sizeof(struct Normal));
 	*Triangles = (struct Triangle3*)calloc(*trianglesCount, sizeof(struct Triangle3));
 	ulong v = 0;
 	ulong n = 0;
@@ -457,13 +490,13 @@ void Fetch (char filename[], struct Triangle3 **Triangles, ulong *trianglesCount
 			char c[10] = {'\0'};
 			u_char i = 2, i2 = 0;
 			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
-			Vertices[v].x = -atof(c);
+			Vertices[v].x = -atof(c) + offset.x;
 			i++; i2 = 0; memset(&c, 0, 10);
 			while (line[i] != ' ') { c[i2] = line[i]; i++; i2++; }
-			Vertices[v].y = atof(c);
+			Vertices[v].y = atof(c) + offset.y;
 			i++; i2 = 0;  memset(&c, 0, 10);
 			while (line[i] != '\n') { c[i2] = line[i]; i++; i2++; }
-			Vertices[v].z = atof(c);
+			Vertices[v].z = atof(c) + offset.z;
 			memset(&c, 0, 10);
 
 			v++;
@@ -492,65 +525,141 @@ void Fetch (char filename[], struct Triangle3 **Triangles, ulong *trianglesCount
 				if (line[i] == ' ')
 					verticiesPerFace++;
 			}
-			char c[32] = {'\0'};
 			u_char i = 2;
 			for (u_char g = 0; g < verticiesPerFace; g++)
 			{
 				u_char i2 = 0;
 				if (verticiesPerFace == 3)
 				{
-					while (line[i] != '/') { c[i2] = line[i]; i++; i2++; }
+					char cv[32] = {'\0'};
+					while (line[i] != '/') { cv[i2] = line[i]; i++; i2++; }
 					// For Vertices
 					switch (g)
 					{
 						case 0:
-							(*Triangles)[f].x1 = Vertices[atoi(c)-1].x;
-							(*Triangles)[f].y1 = Vertices[atoi(c)-1].y;
-							(*Triangles)[f].z1 = Vertices[atoi(c)-1].z;
+							(*Triangles)[f].x1 = Vertices[atoi(cv)-1].x;
+							(*Triangles)[f].y1 = Vertices[atoi(cv)-1].y;
+							(*Triangles)[f].z1 = Vertices[atoi(cv)-1].z;
 							break;
 						case 1:
-							(*Triangles)[f].x2 = Vertices[atoi(c)-1].x;
-							(*Triangles)[f].y2 = Vertices[atoi(c)-1].y;
-							(*Triangles)[f].z2 = Vertices[atoi(c)-1].z;
+							(*Triangles)[f].x2 = Vertices[atoi(cv)-1].x;
+							(*Triangles)[f].y2 = Vertices[atoi(cv)-1].y;
+							(*Triangles)[f].z2 = Vertices[atoi(cv)-1].z;
 							break;
 						case 2:
-							(*Triangles)[f].x3 = Vertices[atoi(c)-1].x;
-							(*Triangles)[f].y3 = Vertices[atoi(c)-1].y;
-							(*Triangles)[f].z3 = Vertices[atoi(c)-1].z;
+							(*Triangles)[f].x3 = Vertices[atoi(cv)-1].x;
+							(*Triangles)[f].y3 = Vertices[atoi(cv)-1].y;
+							(*Triangles)[f].z3 = Vertices[atoi(cv)-1].z;
 							break;
 					}
-					(*Triangles)[f].s1 = 1.0; (*Triangles)[f].s2 = 1.0; (*Triangles)[f].s3 = 1.0;
-					i++; i2 = 0;  memset(&c, 0, 32);
-					while (line[i] != '/') { c[i2] = line[i]; i++; i2++; }
+					(*Triangles)[f].c1 = color;	(*Triangles)[f].c2 = color;	(*Triangles)[f].c3 = color;
+					i++; i2 = 0;
+
+					char cu[32] = {'\0'};
+					while (line[i] != '/') { cu[i2] = line[i]; i++; i2++; }
 					// For UV
-					i++; i2 = 0; memset(&c, 0, 32);
-					while (line[i] != ' ' && line[i] != '\n') { c[i2] = line[i]; i++; i2++; }
-					// For Normals
-					switch (g)
+					i++; i2 = 0;
+
+					char cn[32] = {'\0'};
+					while (line[i] != ' ' && line[i] != '\n') { cn[i2] = line[i]; i++; i2++; }
+					if (SMOOTH_SHADING)
 					{
-						case 0:
-							(*Triangles)[f].n1.x = Normals[atoi(c)-1].x;
-							(*Triangles)[f].n1.y = Normals[atoi(c)-1].y;
-							(*Triangles)[f].n1.z = Normals[atoi(c)-1].z;
-							break;
-						case 1:
-							(*Triangles)[f].n2.x = Normals[atoi(c)-1].x;
-							(*Triangles)[f].n2.y = Normals[atoi(c)-1].y;
-							(*Triangles)[f].n2.z = Normals[atoi(c)-1].z;
-							break;
-						case 2:
-							(*Triangles)[f].n3.x = Normals[atoi(c)-1].x;
-							(*Triangles)[f].n3.y = Normals[atoi(c)-1].y;
-							(*Triangles)[f].n3.z = Normals[atoi(c)-1].z;
-							break;
+						// For Vertex Normals
+						VertexNormals[atoi(cv)-1].x += Normals[atoi(cn)-1].x;
+						VertexNormals[atoi(cv)-1].y += Normals[atoi(cn)-1].y;
+						VertexNormals[atoi(cv)-1].z += Normals[atoi(cn)-1].z;
 					}
-					memset(&c, 0, 32);
+					else
+					{
+						// For Normals
+						switch (g)
+						{
+							case 0:
+								(*Triangles)[f].n1.x = Normals[atoi(cn)-1].x;
+								(*Triangles)[f].n1.y = Normals[atoi(cn)-1].y;
+								(*Triangles)[f].n1.z = Normals[atoi(cn)-1].z;
+								break;
+							case 1:
+								(*Triangles)[f].n2.x = Normals[atoi(cn)-1].x;
+								(*Triangles)[f].n2.y = Normals[atoi(cn)-1].y;
+								(*Triangles)[f].n2.z = Normals[atoi(cn)-1].z;
+								break;
+							case 2:
+								(*Triangles)[f].n3.x = Normals[atoi(cn)-1].x;
+								(*Triangles)[f].n3.y = Normals[atoi(cn)-1].y;
+								(*Triangles)[f].n3.z = Normals[atoi(cn)-1].z;
+								break;
+						}
+					}
 				}
 			}
 			f++;
 		}
 	}
-	fclose(objFile);
-	free(Vertices);
-	free(Normals);
+
+	if (SMOOTH_SHADING)
+	{
+		for (int i = 0; i < verticiesCount; i++)
+		{
+			Normalize(&VertexNormals[i]);
+		}
+		fseek(objFile, 0, 0);
+		f = 0;
+		while (fgets(line, 64, objFile) != NULL)
+		{
+			char code[3] = {'\0'};
+			for (int i = 0; line[i] != ' ' && i < 2; i++)
+				code[i] = line[i];
+			if (strcmp(code, "f") == 0)
+			{
+				u_char verticiesPerFace = 1;
+				for (u_char i = 2; line[i] != '\n'; i++)
+				{
+					if (line[i] == ' ')
+						verticiesPerFace++;
+				}
+				u_char i = 2;
+				for (u_char g = 0; g < verticiesPerFace; g++)
+				{
+					u_char i2 = 0;
+					if (verticiesPerFace == 3)
+					{
+						char cv[32] = {'\0'};
+						while (line[i] != '/') { cv[i2] = line[i]; i++; i2++; }
+						switch (g)
+						{
+							case 0:
+								(*Triangles)[f].n1.x = VertexNormals[atoi(cv)-1].x;
+								(*Triangles)[f].n1.y = VertexNormals[atoi(cv)-1].y;
+								(*Triangles)[f].n1.z = VertexNormals[atoi(cv)-1].z;
+								break;
+							case 1:
+								(*Triangles)[f].n2.x = VertexNormals[atoi(cv)-1].x;
+								(*Triangles)[f].n2.y = VertexNormals[atoi(cv)-1].y;
+								(*Triangles)[f].n2.z = VertexNormals[atoi(cv)-1].z;
+								break;
+							case 2:
+								(*Triangles)[f].n3.x = VertexNormals[atoi(cv)-1].x;
+								(*Triangles)[f].n3.y = VertexNormals[atoi(cv)-1].y;
+								(*Triangles)[f].n3.z = VertexNormals[atoi(cv)-1].z;
+								break;
+						}
+						i++; i2 = 0;
+
+						char cu[32] = {'\0'};
+						while (line[i] != '/') { cu[i2] = line[i]; i++; i2++; }
+						// For UV
+						i++; i2 = 0;
+
+						char cn[32] = {'\0'};
+						while (line[i] != ' ' && line[i] != '\n') { cn[i2] = line[i]; i++; i2++; }
+					}
+				}
+				f++;
+			}
+		}
+		fclose(objFile);
+		free(Vertices);
+		free(Normals);
+	}
 }
