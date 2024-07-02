@@ -42,13 +42,15 @@ int main ()
 		normalbuffer[i] = (struct Normal*)calloc(WIDTH, sizeof(struct Normal));
 	}
 
+	struct Point movement_offset = {0.0, 0.0, 0.0};
+
 	for (uint i = 0; i < 1; i++)
 	{
 		if (!DEBUG)
 		{
 			for (ulong g = 0; g < trianglesCount; g++)
 			{
-				struct Triangle2 tr = Rasterize(WIDTH, HEIGHT, SHORTEST, ASPECT_RATIO, Triangles[g]);
+				struct Triangle2 tr = Rasterize(WIDTH, HEIGHT, SHORTEST, ASPECT_RATIO, Triangles[g], movement_offset);
 
 				DrawTriangle2(WIDTH, HEIGHT, coord, zbuffer, normalbuffer, &tr);
 			}
@@ -61,7 +63,7 @@ int main ()
 				}
 				putchar('\n');
 			}
-			//usleep(16667);
+			usleep(16667);
 			Clear(WIDTH, HEIGHT, coord, zbuffer);
 		}
 	}

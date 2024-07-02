@@ -318,21 +318,21 @@ struct Vec3 VecMinusPoint (struct Vec3 vec, struct Point point)
 	return vec;
 }
 
-struct Triangle2 Rasterize (ushort w, ushort h, ushort s, float ar, struct Triangle3 tr)
+struct Triangle2 Rasterize (ushort w, ushort h, ushort s, float ar, struct Triangle3 tr, struct Point offset)
 {
 	float kx = (float)s * ASPECT_RATIO / tan((float)FOV * M_PI / 360.0);
 	float ky = (float)s / tan((float)FOV * M_PI / 360.0);
 	float hw = (float)w / 2.0;
 	float hh = (float)h / 2.0;
 	struct Triangle2 ans = {
-		RoundF((tr.x1 / tr.z1) * kx + hw),
-		RoundF(-(tr.y1 / tr.z1) * ky + hh),
+		RoundF(((tr.x1 + offset.x) / (tr.z1 + offset.z)) * kx + hw),
+		RoundF(-((tr.y1 + offset.y) / (tr.z1 + offset.z)) * ky + hh),
 
-		RoundF((tr.x2 / tr.z2) * kx + hw),
-		RoundF(-(tr.y2 / tr.z2) * ky + hh),
+		RoundF(((tr.x2 + offset.x) / (tr.z2 + offset.z)) * kx + hw),
+		RoundF(-((tr.y2 + offset.y) / (tr.z2 + offset.z)) * ky + hh),
 		
-		RoundF((tr.x3 / tr.z3) * kx + hw),
-		RoundF(-(tr.y3 / tr.z3) * ky + hh),
+		RoundF(((tr.x3 + offset.x) / (tr.z3 + offset.z)) * kx + hw),
+		RoundF(-((tr.y3 + offset.y) / (tr.z3 + offset.z)) * ky + hh),
 
 		tr.n1, tr.n2, tr.n3,
 		tr.c1, tr.c2, tr.c3,
@@ -396,6 +396,7 @@ void Normalize (struct Normal *normal)
 	(*normal).z /= len;
 }
 
+// Maybe i'll need it. Eventually
 struct Normal CrossProduct (struct Vec3 vec1, struct Vec3 vec2)
 {
 	struct Normal ans = {
@@ -416,19 +417,18 @@ void ComputeLight(ushort w, ushort h, ushort s, u_char** coord, float** zbuffer,
 	float ky = (float)s / tan((float)FOV * M_PI / 360.0);
 	float hw = (float)w / 2.0;
 	float hh = (float)h / 2.0;
-	float minx = 0.0;
-	float miny = 0.0;
-	float maxx = 0.0;
-	float maxy = 0.0;
 	for (int y = 0; y < h; y++)
 	{
 		for (int x = 0; x < w; x++)
 		{
 			if (zbuffer[y][x] != MAX_DISTANCE)
 			{
-				struct Point Intersection = {
-					((float)(x) - hw) * zbuffer[y][x] / kx,
-					((float)(y) - hh) * zbuffer[y][x] / ky,
+				// Basically reverse of Rasterize(). 
+				// It gets x and y values of actual location of the intersection between 
+			 	// object triangle and camera ray.
+			 	struct Point Intersection = { 						
+					((float)(x) - hw) * zbuffer[y][x] / kx, 
+					((float)(y) - hh) * zbuffer[y][x] / ky, 
 				};
 				struct Normal objNormal = {
 					normalbuffer[y][x].x, 
@@ -439,7 +439,10 @@ void ComputeLight(ushort w, ushort h, ushort s, u_char** coord, float** zbuffer,
 					-sun.x, -sun.y, -sun.z
 				};
 				Normalize(&objToSun);
-				coord[y][x] *= fmax(0.0, cos(AngleBetweenNormals(objNormal, objToSun)));
+
+				// Getting luminance value per pixel by getting cosine of angle
+				// between object normal and sun direction normal.
+				coord[y][x] *= fmax(0.0, cos(AngleBetweenNormals(objNormal, objToSun))); 
 			}
 		}
 	}
