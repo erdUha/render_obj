@@ -351,8 +351,12 @@ float VecDot (struct Vec3 vec1, struct Vec3 vec2)
 	return ((vec1.x - vec1.Ox) * (vec2.x - vec2.Ox)) + ((vec1.y - vec1.Oy) * (vec2.y - vec2.Oy)) + ((vec1.z - vec1.Oz) * (vec2.z - vec2.Oz));
 }
 
-float AngleBetweenVecs (struct Vec3 vec1, struct Vec3 vec2)
+float NormalDot (struct Normal norm1, struct Normal norm2)
 {
+	return (norm1.x * norm2.x) + (norm1.y * norm2.y) + (norm1.z * norm2.z);
+}
+
+float AngleBetweenVecs (struct Vec3 vec1, struct Vec3 vec2) {
 	float len1 = VecLen(vec1);
 	float len2 = VecLen(vec2);
 	float dot = VecDot(vec1, vec2);
@@ -365,6 +369,11 @@ float AngleBetweenVecs (struct Vec3 vec1, struct Vec3 vec2)
 			dot / (len1 * len2)
 		)
 	);
+}
+
+float AngleBetweenNormals (struct Normal norm1, struct Normal norm2) {
+	float dot = NormalDot(norm1, norm2);
+	return (acos(dot));
 }
 
 float NormalLen (struct Normal normal)
@@ -421,17 +430,16 @@ void ComputeLight(ushort w, ushort h, ushort s, u_char** coord, float** zbuffer,
 					((float)(x) - hw) * zbuffer[y][x] / kx,
 					((float)(y) - hh) * zbuffer[y][x] / ky,
 				};
-				struct Vec3 objNormal = {
+				struct Normal objNormal = {
 					normalbuffer[y][x].x, 
 					normalbuffer[y][x].y, 
-					normalbuffer[y][x].z,
-					0.0, 0.0, 0.0
+					normalbuffer[y][x].z
 				};
-				struct Vec3 objToSun = {
-					-sun.x, -sun.y, -sun.z,
-					0.0, 0.0, 0.0
+				struct Normal objToSun = {
+					-sun.x, -sun.y, -sun.z
 				};
-				coord[y][x] *= fmax(0.0, cos(AngleBetweenVecs(objNormal, objToSun)));
+				Normalize(&objToSun);
+				coord[y][x] *= fmax(0.0, cos(AngleBetweenNormals(objNormal, objToSun)));
 			}
 		}
 	}
